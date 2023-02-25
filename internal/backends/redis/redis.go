@@ -42,14 +42,29 @@ type Backend struct {
 	luaScriptClearAll *redis.Script
 }
 
+type redisDialer func() (redis.Conn, error)
+
 // New creates an initializes Redis instance.
 func New(addr string) *Backend {
+	return new(func() (redis.Conn, error) {
+		return redis.Dial("tcp", addr)
+	})
+}
+
+// NewByURL creates a new redis instance by a connection string DSN.
+func NewByURL(url string) *Backend {
+	return new(func() (redis.Conn, error) {
+		return redis.DialURL(url)
+	})
+}
+
+func new(dial redisDialer) *Backend {
 	pool := redis.Pool{
 		MaxActive:   100,
 		Wait:        true,
 		MaxIdle:     10,
 		IdleTimeout: 240 * time.Second,
-		Dial:        func() (redis.Conn, error) { return redis.Dial("tcp", addr) },
+		Dial:        dial,
 	}
 
 	return &Backend{

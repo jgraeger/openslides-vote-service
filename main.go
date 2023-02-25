@@ -31,6 +31,7 @@ var (
 
 	envRedisHost = environment.NewVariable("VOTE_REDIS_HOST", "localhost", "Host of the redis used for the fast backend.")
 	envRedisPort = environment.NewVariable("VOTE_REDIS_PORT", "6379", "Port of the redis used for the fast backend.")
+	envRedisDSN  = environment.NewVariable("VOTE_REDIS_DSN", "", "Connection URL of the redis used for the fast backend.")
 
 	envPostgresHost     = environment.NewVariable("VOTE_DATABASE_HOST", "localhost", "Host of the postgres database used for long polls.")
 	envPostgresPort     = environment.NewVariable("VOTE_DATABASE_PORT", "5432", "Port of the postgres database used for long polls.")
@@ -194,9 +195,8 @@ func buildBackends(lookup environment.Environmenter) (fast, long func(context.Co
 		return memory.New(), nil
 	}
 
-	redisAddr := envRedisHost.Value(lookup) + ":" + envRedisPort.Value(lookup)
 	buildRedis := func(ctx context.Context) (vote.Backend, error) {
-		r := redis.New(redisAddr)
+		r := buildRedis(lookup)
 		r.Wait(ctx)
 		if ctx.Err() != nil {
 			return nil, ctx.Err()
@@ -237,4 +237,13 @@ func buildBackends(lookup environment.Environmenter) (fast, long func(context.Co
 	long = builder[envBackendLong.Value(lookup)]
 
 	return fast, long
+}
+
+func buildRedis(lookup environment.Environmenter) *redis.Backend {
+	if envRedisDSN.Value(lookup) != "" {
+		return redis.NewByURL(envRedisDSN.Value(lookup))
+	}
+
+	addr := envRedisHost.Value(lookup) + ":" + envRedisPort.Value(lookup)
+	return redis.New(addr)
 }
