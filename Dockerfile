@@ -1,7 +1,7 @@
 FROM golang:1.20.1-alpine as base
 WORKDIR /root/
 
-RUN apk add git
+RUN apk add git ca-certificates
 
 COPY go.mod go.sum ./
 RUN go mod download
@@ -38,6 +38,9 @@ LABEL org.opencontainers.image.title="OpenSlides Vote Service"
 LABEL org.opencontainers.image.description="The OpenSlides Vote Service handles the votes for electronic polls."
 LABEL org.opencontainers.image.licenses="MIT"
 LABEL org.opencontainers.image.source="https://github.com/OpenSlides/openslides-vote-service"
+
+# Copy CA root certificates
+COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 
 COPY --from=builder /root/openslides-vote-service .
 EXPOSE 9013
